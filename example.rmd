@@ -1,0 +1,37 @@
+## 测试筛选草药函数
+```{R}
+source("fun.R")
+a <- subset_herb(herb = c("chantui", "huangqi"), type = "Herb_pinyin_name")
+b <- subset_herb(herb = c("黄芪"), type = "Herb_cn_name")
+```
+
+## 测试靶点--草药函数
+```{r}
+source("fun.R")
+gene_list <- c("GAA", "POLB", "COMT", "GATM", "TNF")
+rr <- target_herb(gene_list)
+```
+
+
+## 测试KEGG富集函数
+```{r}
+rm(list = ls())
+source("fun.R")
+b <- subset_herb(herb = c("黄芪"), type = "Herb_cn_name")
+sub_data <- subset(b, b$molecule == "hexadecanoic acid")
+gene_sub <- sub_data[1:10, ]$target
+
+kk <- enrich_target_KEGG(x = sub_data, gene_list = gene_sub)
+clusterProfiler::dotplot(kk)
+barplot(kk,title = "KEGG")
+dotplot(kk, title = "KEGG")
+```
+
+## 测试GO富集函数
+```{r}
+source("fun.R")
+a <- subset_herb(herb = "蝉蜕", type = "Herb_cn_name")
+
+BP <- enrich_target_GO(x = a, gene_list = a$target)
+barplot(BP,title = "BP")
+dotplot(BP, title = "BP")

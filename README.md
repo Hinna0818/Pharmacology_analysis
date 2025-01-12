@@ -1,7 +1,7 @@
 # Pharmacology_analysis
-Some light-weight function for pharmacology analysis
+Some light-weight functions for pharmacology analysis
 
 ## references
 TCMNP  
-clusterprofiler
+clusterprofiler  
 DOSE

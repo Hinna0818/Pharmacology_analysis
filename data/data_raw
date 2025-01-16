@@ -1,4 +1,0 @@
-rm(list = ls())
-load("result_data.rda")
-Yulab_data <- subset(dataset, !(target %in% c("Unspecified", "n.a.")))
-save(Yulab_data, file = "./Yulab_data.rda")

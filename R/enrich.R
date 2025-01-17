@@ -9,39 +9,47 @@
 #' @param pvalueCutoff A numeric value indicating the p-value cutoff for significance. Default is \code{0.05}.
 #' @param pAdjustMethod A string specifying the multiple testing correction method. Default is \code{"BH"} (Benjamini-Hochberg).
 #' @param qvalueCutoff A numeric value indicating the q-value cutoff for significance. Default is \code{0.2}.
+#' @param minGSSize A numeric value indicating the minimum size of gene sets in enrichment analysis. Default is \code{10}.
+#' @param maxGSSize A numeric value indicating the maximum size of gene sets in enrichment analysis. Default is \code{500}.
 #'
 #' @return An \code{enrichResult} object containing the KEGG enrichment analysis results.
 #'
 #' @import clusterProfiler
 #' @import dplyr
-#' @import OrgDb
+#' @import org.Hs.eg.db
 #'
 #' @examples
 #' \dontrun{
 #' # using data from "fengmi" as an example
-#'fm <- subset_herb("fengmi", type = "Herb_pinyin_name")
-#'random <- sample(1:nrow(fm), 100, replace = FALSE)
-#'sub_data <- fm[random, ]
-#'gene_list <- sub_data$target
-#'fm_enrich <- enrich_target_KEGG(x = fm, gene_list = gene_list)
-#'clusterProfiler::dotplot(fm_enrich, title = "KEGG")
-#'clusterProfiler::cnetplot(fm_enrich)
+#'fm <- subset_herb(herb = "fengmi", type = "Herb_pinyin_name")
+#'fm_enrich <- enrich_target_KEGG(x = fm, gene_list = fm$target)
+#'
+## dotplot
+#'clusterProfiler::dotplot(fm_enrich, title = "KEGG Pathway Enrichment")
+#'
+## barplot
+#'barplot(fm_enrich, showCategory=10, title = "KEGG Pathway Enrichment") + theme_minimal()
+#'
+## cnetplot
+#'clusterProfiler::cnetplot(fm_enrich, showCategory=3, foldChange=NULL, circular=FALSE, colorEdge=TRUE) + theme_minimal()
 #' }
 #'
 #' @export
 #' 
 enrich_target_KEGG <- function(
-    x, ## A data.frame containing target gene information
-    gene_list = x$target, ## A gene set for enrichment analysis; defaults to all targets in x
+    x, 
+    gene_list = x$target, 
     organism = "hsa",
-    OrgDb = "org.Hs.eg.db",
+    OrgDb = org.Hs.eg.db,
     pvalueCutoff = 0.05,
     pAdjustMethod = "BH",
-    qvalueCutoff = 0.2
+    qvalueCutoff = 0.2,
+    minGSSize = 10,
+    maxGSSize = 500
 ){
   
-  # Load necessary package
   library(clusterProfiler)
+  library(org.Hs.eg.db)
   
   # Validate input data
   if (!"target" %in% colnames(x)){
@@ -58,14 +66,26 @@ enrich_target_KEGG <- function(
   # Convert gene symbols to ENTREZID
   eg <- bitr(unique(gene_input), fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
   
+  if(nrow(eg) == 0){
+    stop("No gene symbols could be converted to ENTREZID.")
+  }
+  
   # Perform KEGG enrichment analysis
   enrich_result <- enrichKEGG(
     gene = eg$ENTREZID,
     organism = organism,
     pvalueCutoff = pvalueCutoff,
     pAdjustMethod = pAdjustMethod,
-    qvalueCutoff = qvalueCutoff
+    qvalueCutoff = qvalueCutoff,
+    minGSSize = minGSSize,
+    maxGSSize = maxGSSize
   )
+  
+  # Check if enrichment result is not empty
+  if(is.null(enrich_result) || nrow(enrich_result@result) == 0){
+    warning("No significant KEGG pathways found.")
+    return(enrich_result)
+  }
   
   # Convert ENTREZID back to readable gene symbols
   enrich_result <- setReadable(enrich_result, OrgDb, keyType = "ENTREZID")
@@ -86,36 +106,52 @@ enrich_target_KEGG <- function(
 #' @param pvalueCutoff A numeric value indicating the p-value cutoff for significance. Default is \code{0.05}.
 #' @param pAdjustMethod A string specifying the multiple testing correction method. Default is \code{"BH"} (Benjamini-Hochberg).
 #' @param qvalueCutoff A numeric value indicating the q-value cutoff for significance. Default is \code{0.2}.
+#' @param minGSSize A numeric value indicating the minimum size of gene sets in enrichment analysis. Default is \code{10}.
+#' @param maxGSSize A numeric value indicating the maximum size of gene sets in enrichment analysis. Default is \code{500}.
 #' @param readable A logical indicating whether to convert gene IDs to gene symbols in the output. Default is \code{TRUE}.
 #'
 #' @return An \code{enrichResult} object containing the GO enrichment analysis results.
 #'
 #' @import clusterProfiler
 #' @import dplyr
-#' @import OrgDb
+#' @import org.Hs.eg.db
 #'
 #' @examples
 #' \dontrun{
-#' # using data from "chantui" for an example
+#' using data from "chantui" for an example
 #'ct <- subset_herb(herb = "蝉蜕", type = "Herb_cn_name")
-#'ct_enrich <- enrich_target_GO(x = ct, gene_list = ct$target) ## using all targets in chantui as default
-#'clusterProfiler::dotplot(ct_enrich,title = "BP")
+#'ct_enrich <- enrich_target_GO(x = ct, gene_list = ct$target, ont = "BP")
+#'
+
+## dotplot
+#'clusterProfiler::dotplot(ct_enrich, title = "GO Pathway Enrichment")
+#'
+
+## barplot
+#'barplot(ct_enrich, showCategory=10, title = "GO Pathway Enrichment") + theme_minimal()
+#'
+
+## cnetplot
+#'clusterProfiler::cnetplot(ct_enrich, showCategory=3, foldChange=NULL, circular=FALSE, colorEdge=TRUE) + theme_minimal()
 #' }
 #'
 #' @export
+#' 
 enrich_target_GO <- function(
-    x, ## A data.frame containing target gene information
-    gene_list = x$target, ## A gene set for enrichment analysis; defaults to all targets in x
+    x, 
+    gene_list = x$target, 
     ont = "BP",
-    OrgDb = "org.Hs.eg.db",
+    OrgDb = org.Hs.eg.db,
     pvalueCutoff = 0.05,
     pAdjustMethod = "BH",
     qvalueCutoff = 0.2,
+    minGSSize = 10,
+    maxGSSize = 500,
     readable = TRUE
 ){
   
-  # Load necessary package
   library(clusterProfiler)
+  library(org.Hs.eg.db)
   
   # Validate input data
   if (!"target" %in% colnames(x)){
@@ -133,21 +169,29 @@ enrich_target_GO <- function(
   }
   
   # Convert gene symbols to ENTREZID
-  eg <- bitr(unique(gene_input), fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+  eg <- clusterProfiler::bitr(unique(gene_input), fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+  
+  if(nrow(eg) == 0){
+    stop("No gene symbols could be converted to ENTREZID.")
+  }
   
   # Perform GO enrichment analysis
-  enrich_result <- enrichGO(
+  enrich_result <- clusterProfiler::enrichGO(
     gene = eg$ENTREZID,
     OrgDb = OrgDb,
     ont = ont,
     pvalueCutoff = pvalueCutoff,
     pAdjustMethod = pAdjustMethod,
-    qvalueCutoff = qvalueCutoff
+    qvalueCutoff = qvalueCutoff,
+    minGSSize = minGSSize,
+    maxGSSize = maxGSSize,
+    readable = readable
   )
   
-  # Optionally convert ENTREZID back to readable gene symbols
-  if(readable){
-    enrich_result <- setReadable(enrich_result, OrgDb, keyType = "ENTREZID")
+  # Check if enrichment result is not empty
+  if(is.null(enrich_result) || nrow(enrich_result@result) == 0){
+    warning("No significant GO terms found.")
+    return(enrich_result)
   }
   
   return(enrich_result)
@@ -162,8 +206,11 @@ enrich_target_GO <- function(
 #' @param gene_list A character vector of gene symbols to be used for enrichment analysis. Defaults to all targets in \code{x}.
 #' @param ont A string specifying the DO ontology category. Must be one of \code{"HDO"} (Human Disease Ontology), \code{"HPO"} (Human Phenotype Ontology), or \code{"MPO"} (Mouse Phenotype Ontology). Default is \code{"HDO"}.
 #' @param OrgDb A string specifying the OrgDb object for gene ID conversion. Default is \code{"org.Hs.eg.db"}.
+#' @param organism A string specifying the organism type. Default is \code{"hsa"}.
 #' @param pvalueCutoff A numeric value indicating the p-value cutoff for significance. Default is \code{0.05}.
 #' @param pAdjustMethod A string specifying the multiple testing correction method. Default is \code{"BH"} (Benjamini-Hochberg).
+#' @param minGSSize A numeric value indicating the minimum size of gene sets in enrichment analysis. Default is \code{10}.
+#' @param maxGSSize A numeric value indicating the maximum size of gene sets in enrichment analysis. Default is \code{500}.
 #' @param qvalueCutoff A numeric value indicating the q-value cutoff for significance. Default is \code{0.2}.
 #' @param readable A logical indicating whether to convert gene IDs to gene symbols in the output. Default is \code{TRUE}.
 #'
@@ -173,37 +220,43 @@ enrich_target_GO <- function(
 #' @import clusterProfiler
 #' @import dplyr
 #' @import org.Hs.eg.db
-#' @import enrichplot
 #'
 #' @examples
 #' \dontrun{
-#' # Example usage with a data frame containing target genes
-#' df <- data.frame(target = c("TP53", "EGFR", "BRCA1", "MYC", "CDK2", "MDR1", "STAT3", "AKT1", "MTOR", "BCL2"))
-#' do_enrich_results <- enrich_target_DO(df)
-#' print(do_enrich_results)
+#' # using "chantui" as example
+#'ct_enrich_DO <- enrich_target_DO(x = ct, ont = "HDO", gene_list = ct$target)
 #'
-#' # Visualize the enrichment results
-#' barplot(do_enrich_results, showCategory=10, title = "Disease Ontology Enrichment")
-#' dotplot(do_enrich_results, showCategory=10, title = "Disease Ontology Enrichment")
-#' cnetplot(do_enrich_results, showCategory=5)
-#' emapplot(do_enrich_results, showCategory=5)
+
+## dotplot
+#'clusterProfiler::dotplot(ct_enrich_DO, title = "DO Pathway Enrichment")
+#'
+
+## barplot
+#'barplot(ct_enrich_DO, showCategory=10, title = "DO Pathway Enrichment") + theme_minimal()
+#'
+
+## cnetplot
+#'clusterProfiler::cnetplot(ct_enrich_DO, showCategory=3, foldChange=NULL, circular=FALSE, colorEdge=TRUE) + theme_minimal()
 #' }
 #'
 #' @export
+#' 
 enrich_target_DO <- function(
-    x, ## A data.frame containing target gene information
-    gene_list = x$target, ## A gene set for enrichment analysis; defaults to all targets in x
+    x, 
+    gene_list = x$target, 
     ont = "HDO", ## using HDO(Human Disease Ontology) as default
-    OrgDb = "org.Hs.eg.db",
+    OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+    organism = "hsa",
     pvalueCutoff = 0.05,
     pAdjustMethod = "BH",
+    minGSSize = 10,
+    maxGSSize = 500,
     qvalueCutoff = 0.2,
     readable = TRUE
 ){
   
-  # Load necessary packages
-  library(DOSE)
   library(clusterProfiler)
+  library(org.Hs.eg.db)
   
   # Validate input data
   if (!"target" %in% colnames(x)){
@@ -220,18 +273,30 @@ enrich_target_DO <- function(
   }
   
   # Convert gene symbols to ENTREZID
-  eg <- bitr(unique(gene_input), fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+  eg <- clusterProfiler::bitr(unique(gene_input), fromType = "SYMBOL", toType = "ENTREZID", OrgDb = OrgDb)
+  
+  if(nrow(eg) == 0){
+    stop("No gene symbols could be converted to ENTREZID.")
+  }
   
   # Perform Disease Ontology enrichment analysis
-  do_enrich_result <- enrichDO(
+  do_enrich_result <- DOSE::enrichDO(
     gene = eg$ENTREZID,
-    ont = "HDO",                
+    ont = ont,
+    organism = organism,
     pvalueCutoff = pvalueCutoff,
     pAdjustMethod = pAdjustMethod,
+    qvalueCutoff = qvalueCutoff,
     minGSSize = 10,
     maxGSSize = 500,
-    readable = readable        # Convert ENTREZID to gene symbols if TRUE
+    readable = readable        
   )
+  
+  # Check if enrichment result is not empty
+  if(is.null(do_enrich_result) || nrow(do_enrich_result@result) == 0){
+    warning("No significant Disease Ontology terms found.")
+    return(do_enrich_result)
+  }
   
   return(do_enrich_result)
   

@@ -7,6 +7,8 @@
 #'
 #' @return A \code{data.frame} with three columns: \code{herb}, \code{molecule}, and \code{target}, containing the corresponding information for the specified herbs. Rows with \code{NA} values are excluded.
 #'
+#' @import dplyr
+#' @import tidyr
 #' @examples
 #' \dontrun{
 #' # Example usage with Chinese herb names
@@ -41,10 +43,10 @@ subset_herb <- function(herb, type){
     }
     
     result <- Yulab_data %>%
-      filter(Herb_cn_name %in% herb) %>%
-      select(c("Herb_pinyin_name", "molecule", "target")) %>%
-      distinct(.keep_all = TRUE) %>%
-      drop_na()
+      dplyr::filter(Herb_cn_name %in% herb) %>%
+      dplyr::select(c("Herb_pinyin_name", "molecule", "target")) %>%
+      dplyr::distinct(.keep_all = TRUE) %>%
+      tidyr::drop_na()
     colnames(result) <- c("herb", "molecule", "target")
     return(result)
   }
@@ -57,10 +59,10 @@ subset_herb <- function(herb, type){
     }
     
     result <- Yulab_data %>%
-      filter(Herb_pinyin_name %in% herb) %>%
-      select(c("Herb_pinyin_name", "molecule", "target")) %>%
-      distinct(.keep_all = TRUE) %>%
-      drop_na()
+      dplyr::filter(Herb_pinyin_name %in% herb) %>%
+      dplyr::select(c("Herb_pinyin_name", "molecule", "target")) %>%
+      dplyr::distinct(.keep_all = TRUE) %>%
+      tidyr::drop_na()
     colnames(result) <- c("herb", "molecule", "target")
     return(result)
   }
@@ -73,9 +75,9 @@ subset_herb <- function(herb, type){
     }
     
     result <- Yulab_data %>%
-      filter(Herb_en_name %in% herb) %>%
-      select("Herb_pinyin_name", "molecule", "target") %>%
-      distinct(.keep_all = TRUE) %>%
+      dplyr::filter(Herb_en_name %in% herb) %>%
+      dplyr::select("Herb_pinyin_name", "molecule", "target") %>%
+      dplyr::distinct(.keep_all = TRUE) %>%
       tidyr::drop_na()
     colnames(result) <- c("herb", "molecule", "target")
     return(result)
@@ -95,6 +97,8 @@ subset_herb <- function(herb, type){
 #'
 #' @return A \code{data.frame} with three columns: \code{herb}, \code{molecule}, and \code{target}, containing information related to the specified genes. Rows with \code{NA} values are excluded.
 #'
+#' @import dplyr
+#' @import tidyr
 #' @examples
 #' \dontrun{
 #' # Example usage with a list of gene symbols
@@ -121,13 +125,11 @@ target_search <- function(gene_list){
   
   # Retrieve relevant data
   herbs_data <- Yulab_data %>%
-    filter(target %in% gene_list) %>%
-    select(c("Herb_pinyin_name", "molecule", "target")) %>%
-    distinct(.keep_all = TRUE) %>%
+    dplyr::filter(target %in% gene_list) %>%
+    dplyr::select(c("Herb_pinyin_name", "molecule", "target")) %>%
+    dplyr::distinct(.keep_all = TRUE) %>%
     tidyr::drop_na()
   
   colnames(herbs_data) <- c("herb", "molecule", "target")
   return(herbs_data)
 }
-
-

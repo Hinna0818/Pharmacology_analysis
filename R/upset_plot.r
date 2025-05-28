@@ -36,6 +36,7 @@
 #'              C = sample(LETTERS, 14),
 #'              D = sample(LETTERS, 30, replace = TRUE))
 #'  upset_plot(list)
+#‘  upset_plot(list, remove_empty_intersects = TRUE)
 #'  upset_plot(list, order.intersect.by = "name")
 #'  upset_plot(list, nintersects = 6)
 upset_plot = function(list,    # use 'a_' prefix for all `aplot` objects

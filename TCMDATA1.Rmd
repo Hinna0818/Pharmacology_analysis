@@ -1,0 +1,267 @@
+---
+title: "tcmdata1"
+author: "Hinna"
+date: "2025-05"
+output: html_document
+---
+本示例包含TCMDATA中的数据获取、对接clusterprofiler、PPI获取与可视化、韦恩图与upset图
+前面的部分与TCMDATA中的README一致
+
+## Search for the target genes of the selected herbs
+```{R}
+devtools::load_all("E:/Yulab/pharmacology/TCMDATA-master/TCMDATA-master")
+herbs <- c("灵芝")
+lz <- search_herb(herb = herbs, type = "Herb_cn_name")
+head(lz)
+```
+
+## Search for herbs that target specific genes
+```{r}
+genes <- c("TP53", "EGFR", "BRCA1")
+herbs <- search_target(genes)
+head(herbs)
+```
+
+
+## using sankey plot to visualize the relationship between herb, molecule, and target
+```{R}
+source("TCM_sankey.R")
+sankey_data <- search_herb(herb = c("lingzhi", "gancao",
+                                    "mahuang", "zhuling",
+                                    "qinghao", "kuxingren",
+                                    "huzhang", "huajuhong",
+                                    "tinglizi", "yiyiren"), 
+                           type = "Herb_pinyin_name")
+
+sankey_data <- sankey_data[sample(nrow(sankey_data), 30), ]
+
+TCM_sankey(sankey_data)
+```
+
+
+## Functional enrichment of target genes
+```{R}
+# You may obtain your genes of interest by `intersect(lz$target, DE_genes)`
+set.seed(2025)
+g <- sample(lz$target, 200)
+library(clusterProfiler)
+x <- enrichGO(g, ont="MF", OrgDb='org.Hs.eg.db', keyType="SYMBOL")
+head(x)
+```
+
+下面是update后的：
+## Functional enrichment visualization
+```{R}
+## basic version
+library(enrichplot)
+cnetplot(x)
+dotplot(x)
+barplot(x)
+
+## lollipop_plot
+source("gglollipop.R")
+gglollipop(x, line.col = "orange", line.type = "dashed")
+```
+
+## PPI analysis
+```{R}
+## get PPI
+ppi <- clusterProfiler::getPPI(g, taxID = 9606)
+str(ppi)
+```
+
+## PPI visualization
+```{R}
+library(ggtangle)
+library(ggrepel)
+library(ggraph)
+library(tidygraph)
+library(igraph)
+library(dplyr)
+library(aplot)
+source("PPI_utils.R")
+
+## basic PPI plot using ggtangle
+# add params into ppi obj
+V(ppi)$degree <- degree(ppi)
+V(ppi)$centrality <- betweenness(ppi)
+p1 <- ggtangle::ggplot(ppi, layout = "circle") +
+  geom_edge(alpha = 0.3) +
+  geom_text_repel(aes(label = name), size = 3) +
+  geom_point(aes(color = degree, size = centrality)) + 
+  scale_color_viridis_c() 
+p1
+```
+
+
+## subset hub nodes in PPI
+```{R}
+## subset edges which have a score higher than 0.7
+ppi_hub <- igraph::subgraph_from_edges(ppi, eids = E(ppi)[score >= 0.7], delete.vertices = TRUE)
+
+p2 <- ggtangle::ggplot(ppi_hub, layout = "kk") +
+  geom_edge(alpha = 0.4) +
+  geom_text_repel(aes(label = name), size = 3) +
+  geom_point(aes(color = degree, size = centrality)) + 
+  scale_color_viridis_c() 
+
+p2
+
+## subset nodes which have top 15 degree nodes based on 'p2'
+ppi_hub_update <- ppi_subset(ppi_hub, n = 15)
+
+p3 <- ggtangle::ggplot(ppi_hub_update, layout = "kk") +
+  geom_edge(alpha = 0.4) +
+  geom_text_repel(aes(label = name), size = 3) +
+  geom_point(aes(color = degree, size = centrality)) + 
+  scale_color_viridis_c() 
+
+p3
+
+plot_list(p2, p3)
+```
+
+
+## Visualize PPI with expression data(eg. RNA-seq)
+```{R}
+## an expression data example
+expr_df <- data.frame(
+  name = V(ppi_hub)$name,
+  logFC = rnorm(vcount(ppi_hub), 0, 2),
+  group = sample(c("up", "down"), vcount(ppi_hub), replace = TRUE)
+)
+
+p4 <- ggtangle::ggplot(ppi_hub, layout = "circle") %<+% expr_df + 
+  geom_edge(alpha = 0.2) +
+  geom_point(aes(color = logFC, shape = group, size = centrality)) +
+  geom_text_repel(aes(label = name), size = 3) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red") +
+  theme_void()
+
+p4
+```
+
+
+## using scatterpie in PPI visualization
+```{R}
+library(scatterpie)
+
+## using sample data
+pie_data <- data.frame(
+  name = V(ppi_hub)$name,
+  A = runif(vcount(ppi_hub)),
+  B = runif(vcount(ppi_hub)),
+  C = runif(vcount(ppi_hub)),
+  D = runif(vcount(ppi_hub))
+)
+
+p5 <- ggtangle::ggplot(ppi_hub, layout = "circle") %<+% pie_data +
+  geom_edge(alpha = 0.25) +
+  geom_scatterpie(cols = c("A", "B", "C", "D"), color = NA) +
+  geom_text_repel(aes(label = name), size = 3) +
+  coord_fixed()
+
+p5
+
+
+## using enrich_obj 'x' in the former enrichGO
+pie_data1 <- getPieData(enrich_obj = x, ppi_genes = V(ppi_new)$name, use_weight = F)
+
+p6 <- ggplot(ppi_hub, layout = "fr") %<+% pie_data1 +
+  geom_edge(alpha = 0.3) +
+  geom_scatterpie(cols = names(pie_data1)[-1], color = NA) +
+  geom_text(aes(label = name), size = 2) +
+  coord_fixed() +
+  theme_void()
+
+p6
+
+
+## using p-value to adjust the proportion of scatterpie
+pie_data2 <- getPieData(enrich_obj = x, ppi_genes = V(ppi_new)$name, use_weight = T, weight_scale = "logp")
+
+p7 <- ggplot(ppi_hub, layout = "fr") %<+% pie_data2 +
+  geom_edge(alpha = 0.3) +
+  geom_scatterpie(cols = names(pie_data2)[-1], color = NA) +
+  geom_text(aes(label = name), size = 2) +
+  coord_fixed() +
+  theme_void()
+
+p7
+
+plot_list(p6, p7)
+```
+
+## intersection
+### get venn data
+```{R}
+source("ggvenn_plot.R")
+source("getvennresult.R")
+source("getvenndata.R")
+load("venn_demo_data.rda")
+
+## get venn data
+tcm <- venn_demo_data$TCM
+degs <- venn_demo_data$DEGs
+markers <- venn_demo_data$Markers
+db <- venn_demo_data$DB
+
+venn_input <- getvenndata(TCM_targets = tcm, DEGs = degs, 
+                          Markers = markers, DB_targets = db)
+
+venn_input |> head()
+```
+
+
+### venn plot(it's recommended when sets <= 4)
+```{R}
+p8 <- ggvenn_plot(venn_input)
+p8
+
+p9 <-ggvenn_plot(venn_input, col_names = c("TCM_targets","DEGs","Markers"),
+                    set.color = c("#FF8748", "#5BAA56", "#B8BB5B"),
+                    stroke.color = "white")
+p9
+plot_list(p8, p9)
+```
+
+
+### upset plot(it's recommended when sets > 4)
+```{R}
+source("upset_plot.R")
+library(yulab.utils)
+library(ggplot2)
+
+p10 <- upset_plot(venn_demo_data)
+p10
+
+p11 <- upset_plot(venn_demo_data, color.intersect.by = "Set2",
+                  color.set.by = "Dark2")
+p11
+
+plot_list(p10, p11)
+```
+
+
+## get intersection result
+### method1
+```{r}
+venn_res <- getvennresult(venn_input)
+venn_res |> head()
+
+gene_vec <- strsplit(venn_res$Genes[1], ",\\s*")[[1]]
+gene_vec |> head()
+```
+
+### method2
+```{r}
+# venn_res1 <- aplotExtra::get_all_subsets(venn_demo_data)
+venn_res2 <- aplotExtra:::get_all_subsets_items(venn_demo_data)
+venn_res2[[5]] |> head()
+```
+
+
+
+
+
+

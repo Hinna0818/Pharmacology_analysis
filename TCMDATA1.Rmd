@@ -23,8 +23,9 @@ head(herbs)
 ```
 
 
-## using sankey plot to visualize the relationship between herb, molecule, and target
+## using sankey and alluvial plot to visualize the relationship between herb, molecule, and target
 ```{R}
+## sankey plot
 source("TCM_sankey.R")
 sankey_data <- search_herb(herb = c("lingzhi", "gancao",
                                     "mahuang", "zhuling",
@@ -34,8 +35,15 @@ sankey_data <- search_herb(herb = c("lingzhi", "gancao",
                            type = "Herb_pinyin_name")
 
 sankey_data <- sankey_data[sample(nrow(sankey_data), 30), ]
+ps <- TCM_sankey(sankey_data)
+ps
 
-TCM_sankey(sankey_data)
+## alluvial plot
+source("TCM_alluvial.R")
+pa <- TCM_alluvial(sankey_data)
+pa
+
+aplot::plot_list(ps, pa)
 ```
 
 
@@ -259,9 +267,3 @@ gene_vec |> head()
 venn_res2 <- aplotExtra:::get_all_subsets_items(venn_demo_data)
 venn_res2[[5]] |> head()
 ```
-
-
-
-
-
-

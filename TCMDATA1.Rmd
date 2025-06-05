@@ -4,7 +4,8 @@ author: "Hinna"
 date: "2025-05"
 output: html_document
 ---
-本示例包含TCMDATA中的数据获取、对接clusterprofiler、PPI获取与可视化、韦恩图与upset图
+本示例包含TCMDATA中的数据获取、桑基图、对接clusterprofiler、PPI获取与可视化、韦恩图与upset图
+
 前面的部分与TCMDATA中的README一致
 
 ## Search for the target genes of the selected herbs
@@ -23,7 +24,7 @@ head(herbs)
 ```
 
 
-## using sankey and alluvial plot to visualize the relationship between herb, molecule, and target
+## using sankey and alluvial plot to visualize the relationship between herb, molecule, and target(新增)
 ```{R}
 ## sankey plot
 source("TCM_sankey.R")
@@ -68,7 +69,11 @@ barplot(x)
 
 ## lollipop_plot
 source("gglollipop.R")
-gglollipop(x, line.col = "orange", line.type = "dashed")
+gg1 <- gglollipop(x)
+gg2 <- gglollipop(x, color = "qvalue", orderBy = "Count")
+gg3 <- gglollipop(x, line.col = "orange", line.type = "dashed", palette = "PiYG")
+gg4 <- gglollipop(x, line.col = "skyblue", line.type = "dashed", palette = "Spectral", show_count = F)
+aplot::plot_list(gg1, gg2, gg3, gg4, ncol = 2)
 ```
 
 ## PPI analysis

@@ -10,7 +10,6 @@
 #' @return A `ggplot` object representing the alluvial diagram.
 #'
 #' @import ggplot2
-#' @importFrom dplyr %>%
 #' @importFrom cols4all c4a
 #' @importFrom ggsankey make_long geom_alluvial geom_alluvial_text theme_sankey
 #'
@@ -22,10 +21,6 @@ TCM_alluvial <- function(data,
                        flow.alpha = 0.5,
                        palette = "rainbow_wh_rd",
                        ...) {
-  
-  library(ggplot2)
-  library(cols4all)
-  library(dplyr)
   
   stopifnot(is.data.frame(data), ncol(data) >= 2)
   

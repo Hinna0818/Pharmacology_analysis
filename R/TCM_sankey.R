@@ -12,7 +12,6 @@
 #' @return A `ggplot` object representing the Sankey diagram.
 #'
 #' @import ggplot2
-#' @importFrom dplyr %>%
 #' @importFrom cols4all c4a c4a_pals
 #' @importFrom ggsankey make_long geom_sankey geom_sankey_text theme_sankey
 #'
@@ -24,11 +23,7 @@ TCM_sankey <- function(data,
                        flow.alpha = 0.5,
                        palette = "rainbow_wh_rd",
                        ...) {
-  
-  library(ggplot2)
-  library(cols4all)
-  library(dplyr)
-  
+
   stopifnot(is.data.frame(data), ncol(data) >= 2)
   
   layer_cols <- colnames(data)

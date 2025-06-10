@@ -6,6 +6,11 @@
 #' @param circle_radius Numeric vector of radii for 3 layers
 #' @param max.overlaps Max label overlaps
 #' @return A ggplot2 ggraph object
+#' @importFrom ggplot2
+#' @importFrom ggraph
+#‘ @importFrom igraph V
+#' @importFrom dplyr select mutate
+
 #' @export
 
 phar_net <- function(
@@ -16,10 +21,10 @@ phar_net <- function(
     max.overlaps = 100
 ){
   
-  library(igraph)
-  library(ggraph)
-  library(dplyr)
-  library(ggplot2)
+  #library(igraph)
+  #library(ggraph)
+  #library(dplyr)
+  #library(ggplot2)
   
   expected_cols <- c("herb", "molecule", "target")
   if (!all(expected_cols %in% colnames(df))) {
